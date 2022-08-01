@@ -23,7 +23,7 @@ public:
 
     SimpleVector() noexcept = default;
 
-    //конструкторы и операторы
+    //конструкторы и деструтор
     explicit SimpleVector(size_t size) : size_(size), capacity_(size) {
         arr_ = new Type[capacity_];
         std::fill(this->begin(), this->end(), Type());
@@ -62,6 +62,19 @@ public:
             other.size_ = other.capacity_ = 0;
     }
 
+    SimpleVector(ReserveProxyObj size_class) {
+        size_t new_capacity = size_class.siz;
+        if (new_capacity > capacity_) {
+            arr_ = new Type[new_capacity];
+            capacity_ = new_capacity;
+        }
+    }
+
+    ~SimpleVector() {
+        delete[] arr_;
+    }
+
+    //Операторы вектора
     SimpleVector& operator=(const SimpleVector& rhs) {
         if (this != &rhs) {
             delete[] arr_;
@@ -87,6 +100,42 @@ public:
         return *this;
     }
 
+    Type& operator[](size_t index) noexcept {
+        assert(index < size_);
+        return arr_[index];
+    }
+
+    const Type& operator[](size_t index) const noexcept {
+        assert(index < size_);
+        return arr_[index];
+    }
+
+    //Итераторы для перемещения по вектору
+    Iterator begin() noexcept {
+        return &arr_[0];
+    }
+
+    Iterator end() noexcept {
+        return &arr_[size_];
+    }
+
+    ConstIterator begin() const noexcept {
+        return &arr_[0];
+    }
+
+    ConstIterator end() const noexcept {
+        return &arr_[size_];
+    }
+
+    ConstIterator cbegin() const noexcept {
+        return &arr_[0];
+    }
+
+    ConstIterator cend() const noexcept {
+        return &arr_[size_];
+    }
+
+    //Методы над векторм
     size_t GetSize() const noexcept {
         return size_;
     }
@@ -97,16 +146,6 @@ public:
 
     bool IsEmpty() const noexcept {
         return size_ == 0;
-    }
-
-    Type& operator[](size_t index) noexcept {
-        assert(index < size_);
-        return arr_[index];
-    }
-
-    const Type& operator[](size_t index) const noexcept {
-        assert(index < size_);
-        return arr_[index];
     }
 
     Type& At(size_t index) {
@@ -149,34 +188,6 @@ public:
                 arr_[i] = Type();
             }
         }
-    }
-
-    Iterator begin() noexcept {
-        return &arr_[0];
-    }
-
-    Iterator end() noexcept {
-        return &arr_[size_];
-    }
-
-    ConstIterator begin() const noexcept {
-        return &arr_[0];
-    }
-
-    ConstIterator end() const noexcept {
-        return &arr_[size_];
-    }
-
-    ConstIterator cbegin() const noexcept {
-        return &arr_[0];
-    }
-
-    ConstIterator cend() const noexcept {
-        return &arr_[size_];
-    }
-
-    ~SimpleVector() {
-        delete[] arr_;
     }
 
     void PushBack(const Type& item) {
@@ -336,14 +347,6 @@ public:
             }
             capacity_ = new_capacity;
             delete[] tmp;
-        }
-    }
-
-    SimpleVector(ReserveProxyObj size_class) {
-        size_t new_capacity = size_class.siz;
-        if (new_capacity > capacity_) {
-            arr_ = new Type[new_capacity];
-            capacity_ = new_capacity;
         }
     }
 
