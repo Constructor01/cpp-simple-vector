@@ -5,6 +5,7 @@
 #include <iostream>
 #include <numeric>
 #include <utility>
+#include <iterator>
 class ReserveProxyObj {
 public:
     size_t siz = 0;
@@ -25,9 +26,7 @@ public:
     //конструкторы и операторы
     explicit SimpleVector(size_t size) : size_(size), capacity_(size) {
         arr_ = new Type[capacity_];
-        for (int i = 0; i < static_cast<int>(size);i++) {
-            arr_[i] = Type();
-        }
+        std::fill(this->begin(), this->end(), Type());
     }
 
     SimpleVector(size_t size, const Type& value) : size_(size), capacity_(size) {
@@ -37,54 +36,41 @@ public:
         }
     }
 
-    SimpleVector(size_t size, Type&& value) : size_(size), capacity_(size) {
-        arr_ = new Type[capacity_];
-        for (int i = 0; i < static_cast<int>(size);i++) {
-            arr_[i] = std::move(value);
-        }
-    }
-
     SimpleVector(std::initializer_list<Type> init) :size_(init.size()), capacity_(init.size()) {
         arr_ = new Type[init.size()];
         int i = 0;
-        for (const auto& znschenie : init) {
-            arr_[i] = znschenie;
+        for (auto& element_init : init) {
+            arr_[i] = std::move(element_init);
             i++;
         }
     }
 
     SimpleVector(const SimpleVector& other) {
-        if (this != &other) {
-            delete[] arr_;
             arr_ = new Type[other.capacity_];
             for (size_t i = 0; i < other.size_; i++) {
                 arr_[i] = other.arr_[i];
             }
             size_ = other.size_;
             capacity_ = other.capacity_;
-        }
     }
 
     SimpleVector(SimpleVector&& other) {
-        if (this != &other) {
-            delete[] arr_;
             arr_ = other.arr_;
             size_ = other.size_;
             capacity_ = other.capacity_;
             other.arr_ = nullptr;
             other.size_ = other.capacity_ = 0;
-        }
     }
 
     SimpleVector& operator=(const SimpleVector& rhs) {
         if (this != &rhs) {
             delete[] arr_;
+            size_ = rhs.size_;
+            capacity_ = rhs.capacity_;
             arr_ = new Type[rhs.capacity_];
             for (int i = 0; i < static_cast<int>(rhs.size_); i++) {
                 arr_[i] = rhs.arr_[i];
             }
-            size_ = rhs.size_;
-            capacity_ = rhs.capacity_;
         }
         return *this;
     }
@@ -114,10 +100,12 @@ public:
     }
 
     Type& operator[](size_t index) noexcept {
+        assert(index < size_);
         return arr_[index];
     }
 
     const Type& operator[](size_t index) const noexcept {
+        assert(index < size_);
         return arr_[index];
     }
 
@@ -143,42 +131,21 @@ public:
         if (new_size <= size_) {
             size_ = new_size;
         }
-        if (new_size > capacity_) {
-            //копируем все элементы прошлого массива
-            Type* mass;
-            mass = new Type[size_];
+        if (new_size <= capacity_ && new_size > size_) {
+            //запоминаем старый размер и добавляем типиризованние данные
             size_t old_size = size_;
-            for (int i = 0; i < static_cast<int>(size_); i++) {
-                mass[i] = std::move(arr_[i]);
-            }
-            arr_ = new Type[new_size];
             size_ = new_size;
-            capacity_ = new_size;
             //заполняем данными
-            int i = 0;
-            for (;i < static_cast<int>(old_size); i++) {
-                arr_[i] = std::move(mass[i]);
-            }
-            for (;i < static_cast<int>(new_size); i++) {
+            for (size_t i = old_size;i < new_size; i++) {
                 arr_[i] = Type();
             }
         }
-        if (new_size <= capacity_ and new_size > size_) {
-            //копируем все элементы прошлого массива
-            Type* mass;
-            mass = new Type[size_];
+        if (new_size > capacity_) {
             size_t old_size = size_;
-            for (int i = 0; i < static_cast<int>(size_); i++) {
-                mass[i] = std::move(arr_[i]);
-            }
-            arr_ = new Type[new_size];
-            size_ = new_size;
             //заполняем данными
-            int i = 0;
-            for (;i < static_cast<int>(old_size); i++) {
-                arr_[i] = std::move(mass[i]);
-            }
-            for (;i < static_cast<int>(new_size); i++) {
+            this->Reserve(new_size);
+            size_ = new_size;
+            for (size_t i = old_size;i < new_size; i++) {
                 arr_[i] = Type();
             }
         }
@@ -213,7 +180,7 @@ public:
     }
 
     void PushBack(const Type& item) {
-        if (capacity_ == 0 and size_ == 0) {
+        if (capacity_ == 0 && size_ == 0) {
             capacity_ = 1;
             arr_ = new Type[capacity_];
             size_ = 1;
@@ -221,13 +188,7 @@ public:
         }
         else {
             if (size_ == capacity_) {
-                capacity_ *= 2;
-                Type* copy_arr = arr_;
-                arr_ = new Type[capacity_];
-                for (int i = 0; i < static_cast<int>(size_); ++i) {
-                    arr_[i] = std::move(copy_arr[i]);
-                }
-                delete[] copy_arr;
+                this->Reserve(capacity_ * 2);
                 arr_[size_++] = std::move(item);
             }
             else {
@@ -239,7 +200,7 @@ public:
     }
 
     void PushBack(Type&& item) {
-        if (capacity_ == 0 and size_ == 0) {
+        if (capacity_ == 0 && size_ == 0) {
             capacity_ = 1;
             arr_ = new Type[capacity_];
             size_ = 1;
@@ -247,13 +208,7 @@ public:
         }
         else {
             if (size_ == capacity_) {
-                capacity_ *= 2;
-                Type* copy_arr = arr_;
-                arr_ = new Type[capacity_];
-                for (int i = 0; i < static_cast<int>(size_); ++i) {
-                    arr_[i] = std::move(copy_arr[i]);
-                }
-                delete[] copy_arr;
+                this->Reserve(capacity_ * 2);
                 arr_[size_++] = std::move(item);
             }
             else {
@@ -265,6 +220,8 @@ public:
     }
 
     Iterator Insert(ConstIterator pos, const Type& value) {
+        assert(pos >= this->begin());
+        assert(pos <= this->end());
         //пустой вектор
         if (capacity_ == 0) {
             //this->PushBack(value);
@@ -275,69 +232,35 @@ public:
             capacity_ = 1;
             return &arr_[0];
         }
+        //находим номер куда надо вставить
+        int shet = std::distance(this->begin(), const_cast<Iterator>(pos));
         //вектор полностью заполнен
         if (capacity_ == size_) {
-            //находим номер куда надо вставить
-            int shet = 0;
-            for (auto it = this->begin(); it != this->end(); it++) {
-                if (pos == it) {
-                    break;
-                }
-                shet++;
-            }
             //увеличиваем вместимость в 2 раза
-            capacity_ *= 2;
-            Type* copy_arr = arr_;
-            arr_ = new Type[capacity_];
-            for (int i = 0; i < static_cast<int>(size_); ++i) {
-                arr_[i] = std::move(copy_arr[i]);
-            }
-            delete[] copy_arr;
-            //копируем все элементы  после pos
-            Type* back_pos = new Type[static_cast<int>(size_) - shet];
-            int j = 0;
-            for (int i = shet; i < static_cast<int>(size_);i++) {
-                back_pos[j] = std::move(arr_[i]);
-                j++;
-            }
-            //присваиваем
-            size_++;
-            arr_[shet] = std::move(value);
-            int k = 0;
-            for (int i = shet + 1; i < static_cast<int>(size_); i++) {
-                arr_[i] = std::move(back_pos[k]);
-                k++;
-            }
-            return &arr_[shet];
+            this->Reserve(capacity_ * 2);
         }
-        //когда вместимость больше размера
-        if (capacity_ > size_) {
-            int shet = 0;
-            for (auto it = this->begin(); it != this->end(); it++) {
-                if (pos == it) {
-                    break;
-                }
-                shet++;
-            }
-            Type* back_pos = new Type[static_cast<int>(size_) - shet];
-            int j = 0;
-            for (int i = shet; i < static_cast<int>(size_);i++) {
-                back_pos[j] = std::move(arr_[i]);
-                j++;
-            }
-            size_++;
-            arr_[shet] = std::move(value);
-            int k = 0;
-            for (int i = shet + 1; i < static_cast<int>(size_); i++) {
-                arr_[i] = std::move(back_pos[k]);
-                k++;
-            }
-            return &arr_[shet];
+        //копируем все элементы  после pos
+        Type* back_pos = new Type[static_cast<int>(size_) - shet];
+        int j = 0;
+        for (int i = shet; i < static_cast<int>(size_);i++) {
+            back_pos[j] = std::move(arr_[i]);
+            j++;
         }
-        return this->begin();
+        //присваиваем
+        size_++;
+        arr_[shet] = value;
+        int k = 0;
+        for (int i = shet + 1; i < static_cast<int>(size_); i++) {
+            arr_[i] = std::move(back_pos[k]);
+            k++;
+        }
+        delete[] back_pos;
+        return &arr_[shet];      
     }
 
     Iterator Insert(ConstIterator pos, Type&& value) {
+        assert(pos >= this->begin());
+        assert(pos <= this->end());
         //пустой вектор
         if (capacity_ == 0) {
             //this->PushBack(value);
@@ -348,92 +271,49 @@ public:
             capacity_ = 1;
             return &arr_[0];
         }
+        //находим номер куда надо вставить
+        int shet = std::distance(this->begin(), const_cast<Iterator>(pos));
         //вектор полностью заполнен
         if (capacity_ == size_) {
-            //находим номер куда надо вставить
-            int shet = 0;
-            for (auto it = this->begin(); it != this->end(); it++) {
-                if (pos == it) {
-                    break;
-                }
-                shet++;
-            }
             //увеличиваем вместимость в 2 раза
-            capacity_ *= 2;
-            Type* copy_arr = arr_;
-            arr_ = new Type[capacity_];
-            for (int i = 0; i < static_cast<int>(size_); ++i) {
-                arr_[i] = std::move(copy_arr[i]);
-            }
-            delete[] copy_arr;
-            //копируем все элементы  после pos
-            Type* back_pos = new Type[static_cast<int>(size_) - shet];
-            int j = 0;
-            for (int i = shet; i < static_cast<int>(size_);i++) {
-                back_pos[j] = std::move(arr_[i]);
-                j++;
-            }
-            //присваиваем
-            size_++;
-            arr_[shet] = std::move(value);
-            int k = 0;
-            for (int i = shet + 1; i < static_cast<int>(size_); i++) {
-                arr_[i] = std::move(back_pos[k]);
-                k++;
-            }
-            return &arr_[shet];
+            this->Reserve(capacity_ * 2);
         }
-        //когда вместимость больше размера
-        if (capacity_ > size_) {
-            int shet = 0;
-            for (auto it = this->begin(); it != this->end(); it++) {
-                if (pos == it) {
-                    break;
-                }
-                shet++;
-            }
-            Type* back_pos = new Type[static_cast<int>(size_) - shet];
-            int j = 0;
-            for (int i = shet; i < static_cast<int>(size_);i++) {
-                back_pos[j] = std::move(arr_[i]);
-                j++;
-            }
-            size_++;
-            arr_[shet] = std::move(value);
-            int k = 0;
-            for (int i = shet + 1; i < static_cast<int>(size_); i++) {
-                arr_[i] = std::move(back_pos[k]);
-                k++;
-            }
-            return &arr_[shet];
+        //копируем все элементы  после pos
+        Type* back_pos = new Type[static_cast<int>(size_) - shet];
+        int j = 0;
+        for (int i = shet; i < static_cast<int>(size_);i++) {
+            back_pos[j] = std::move(arr_[i]);
+            j++;
         }
-        return this->begin();
+        //присваиваем
+        size_++;
+        arr_[shet] = std::move(value);
+        int k = 0;
+        for (int i = shet + 1; i < static_cast<int>(size_); i++) {
+            arr_[i] = std::move(back_pos[k]);
+            k++;
+        }
+        delete[] back_pos;
+        return &arr_[shet];
     }
 
     // "Удаляет" последний элемент вектора. Вектор не должен быть пустым
     void PopBack() noexcept {
-        if (!(this->IsEmpty())) {
+        assert(!(this->IsEmpty()));
             size_--;
-        }
     }
 
     // Удаляет элемент вектора в указанной позиции
     Iterator Erase(ConstIterator pos) {
-        if (!this->IsEmpty()) {
-            size_t shet = 0;
-            for (auto it = this->begin(); it != this->end(); it++) {
-                if (pos == it) {
-                    break;
-                }
-                shet++;
-            }
-            for (size_t i = shet + 1; i < size_; ++i) {
-                arr_[i - 1] = std::move(arr_[i]);
-            }
-            --size_;
-            return &arr_[shet];
+        assert(pos >= this->begin());
+        assert(pos <= this->end());
+        assert(!(this->IsEmpty()));
+        size_t shet = std::distance(this->begin(), const_cast<Iterator>(pos));
+        for (size_t i = shet + 1; i < size_; ++i) {
+            arr_[i - 1] = std::move(arr_[i]);
         }
-        return this->begin();
+        --size_;
+        return &arr_[shet];
     }
 
     // Обменивает значение с другим вектором
@@ -447,11 +327,12 @@ public:
         if (new_capacity>capacity_) {
             Type* tmp = new Type[size_];
             for (size_t i = 0; i < size_;i++) {
-                tmp[i] = arr_[i];
+                tmp[i] = std::move(arr_[i]);
             }
+            delete[] arr_;
             arr_ = new Type[new_capacity];
             for (size_t i = 0; i < size_; i++) {
-                arr_[i] = tmp[i];
+                arr_[i] = std::move(tmp[i]);
             }
             capacity_ = new_capacity;
             delete[] tmp;
@@ -461,16 +342,8 @@ public:
     SimpleVector(ReserveProxyObj size_class) {
         size_t new_capacity = size_class.siz;
         if (new_capacity > capacity_) {
-            Type* tmp = new Type[size_];
-            for (size_t i = 0; i < size_;i++) {
-                tmp[i] = arr_[i];
-            }
             arr_ = new Type[new_capacity];
-            for (size_t i = 0; i < size_; i++) {
-                arr_[i] = tmp[i];
-            }
             capacity_ = new_capacity;
-            delete[] tmp;
         }
     }
 
@@ -485,17 +358,8 @@ inline bool operator==(const SimpleVector<Type>& lhs, const SimpleVector<Type>& 
     if (lhs.GetSize() != rhs.GetSize()) {
         return false;
     }
-    else {
-        auto it_lhs = lhs.begin(), it_rhs = rhs.begin();
-        for (;it_lhs != lhs.end();) {
-            if ((*it_lhs) != (*it_rhs)) {
-                return false;
-            }
-            it_lhs++;
-            it_rhs++;
-        }
-    }
-    return true;
+
+    return std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
 template <typename Type>
