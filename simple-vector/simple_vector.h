@@ -31,7 +31,7 @@ public:
         }
         catch (...) {
             delete[] arr_;
-            std::cerr << "ERROR";
+            throw "memory leak";
         }
 
     }
@@ -45,7 +45,7 @@ public:
         }
         catch (...) {
             delete[] arr_;
-            std::cerr << "ERROR";
+            throw "memory leak";
         }
     }
 
@@ -60,7 +60,7 @@ public:
         }
         catch (...) {
             delete[] arr_;
-            std::cerr << "ERROR";
+            throw "memory leak";
         }
 
     }
@@ -76,7 +76,7 @@ public:
         }
         catch (...) {
             delete[] arr_;
-            std::cerr << "ERROR";
+            throw "memory leak";
         }     
     }
 
@@ -103,19 +103,8 @@ public:
     //Операторы вектора
     SimpleVector& operator=(const SimpleVector& rhs) {
         if (this != &rhs) {
-            try {
-                delete[] arr_;
-                size_ = rhs.size_;
-                capacity_ = rhs.capacity_;
-                arr_ = new Type[rhs.capacity_];
-                for (int i = 0; i < static_cast<int>(rhs.size_); i++) {
-                    arr_[i] = rhs.arr_[i];
-                }
-            }
-            catch (...) {
-                delete[] arr_;
-                std::cerr << "ERROR";
-            }          
+                auto rhs_copy(rhs);
+                swap(rhs_copy);    
         }
         return *this;
     }
@@ -244,7 +233,7 @@ public:
         }
         catch (...) {
             delete[] arr_;
-            std::cerr << "ERROR";
+            throw "memory leak";
         }
     }
 
@@ -270,7 +259,7 @@ public:
         }
         catch (...) {
             delete[] arr_;
-            std::cerr << "ERROR";
+            throw "memory leak";
         }
     }
 
@@ -302,8 +291,8 @@ public:
         }
         catch (...) {
             delete[] arr_;
-            std::cerr << "ERROR";
-        }     
+            throw "memory leak";
+        }
     }
 
     Iterator Insert(ConstIterator pos, Type&& value) {
@@ -334,8 +323,8 @@ public:
         }
         catch (...) {
             delete[] arr_;
-            std::cerr << "ERROR";
-        }       
+            throw "memory leak";
+        } 
     }
 
     // "Удаляет" последний элемент вектора. Вектор не должен быть пустым
@@ -359,7 +348,7 @@ public:
         }
         catch (...) {
             delete[] arr_;
-            std::cerr << "ERROR";
+            throw "memory leak";
         }   
     }
 
@@ -373,22 +362,18 @@ public:
     void Reserve(size_t new_capacity) {
         try {
             if (new_capacity > capacity_) {
-                Type* tmp = new Type[size_];
+                Type* tmp = new Type[new_capacity];
                 for (size_t i = 0; i < size_;i++) {
                     tmp[i] = std::move(arr_[i]);
                 }
-                delete[] arr_;
-                arr_ = new Type[new_capacity];
-                for (size_t i = 0; i < size_; i++) {
-                    arr_[i] = std::move(tmp[i]);
-                }
+                std::swap(arr_, tmp);
                 capacity_ = new_capacity;
                 delete[] tmp;
             }
         }
         catch (...) {
             delete[] arr_;
-            std::cerr << "ERROR";
+            throw "memory leak";
         }
     }
 
